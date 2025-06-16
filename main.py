@@ -1,8 +1,13 @@
 from fpdf import FPDF
-from fpdf.enums import XPos, YPos
-from generator_text import contract_template_english
-from generator_text2 import contract_template_ukraine
-from generator_text3 import contract_template_russia
+from generator_text2 import DAPTemplateUkraine
+from generator_text import DAPTemplateEnglish
+from generator_text3 import DAPTemplateRus
+import requests
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+from typing import Dict, Any
 
 class ContractPDF(FPDF):
 
@@ -86,7 +91,7 @@ class ContractPDF(FPDF):
         y_start = self.DEFAULT_TOP_MARGIN
 
         # Генерируем заголовки используя переданные шаблоны
-        headers = [templates[i].render_header() for i in range(self.num_columns)]
+        headers = [template.render_header() for template in templates]
         indexes = [0] * self.num_columns
         lengths = [len(col) for col in sections_columns]
         first_page = [True] * self.num_columns
@@ -125,48 +130,148 @@ class ContractPDF(FPDF):
         self.set_xy(x, y)
         self.cell(w, h, '', border=1)
 
+# Базовый словарь параметров (на английском языке)
+base_contract_params = {
+    'contract_number': '1234567890',
+    'date': '2024-01-01',
+    'seller_name': 'LLC "Best Grain"',
+    'seller_representative': 'Ivan Ivanov',
+    'buyer_name': 'LLC "AgroImport"',
+    'buyer_representative': 'John Smith',
+    'goods_description': 'Ukrainian wheat in bulk',
+    'incoterms_year': '2024',
+    'quantity': 1000,
+    'tolerance': 5,
+    'metrics': [
+        "\nProtein: base 10.5%, not less than 9% (N x 5.7 on dry basis)\nThe Buyer applies a penalty of 1% of the delivered quantity / contract price for each reduction of 1% from the base protein ratio. No bonuses are provided for protein above 10.5%.",
+        "\nMoisture: base 14.0%, max 15%\nThe Buyer applies a penalty of 1% of the delivered quantity / contract price for each excess of 1% of the base proportional moisture. No bonuses are provided for moisture below 14%."
+    ],
+    'price_per_ton': 250,
+    'price_per_ton_text': 'two hundred and fifty',
+    'total_value': 250000,
+    'total_value_text': 'two hundred and fifty thousand',
+    'delivery_start_date': '01.01.2025',
+    'delivery_end_date': '31.12.2025',
+    'exporter_name': '_______________________',
+    'edrpou_code': '________',
+    'delivery_address': 'Odessa region, Odessa district, Yuzhny port, berth No. 17, LLC "TIS-MINDOBRIVA" or Yuzhny port, berth No. 16, LLC "TIS-MINDOBRIVA"',
+    'first_payment_percent': 90,
+    'first_payment_days': 3,
+    'second_payment_percent': 10,
+    'second_payment_days': 10,
+    'seller_email': 'seller@example.com',
+    'buyer_email': 'buyer@example.com'
+}
 
+def translate_with_deepl(text: str, target_lang: str, api_key: str = None) -> str:
+    """
+    Переводит текст с помощью DeepL API
+    """
+    if not api_key:
+        api_key = os.getenv('DEEPL_API_KEY')
+    
+    if not api_key:
+        print("⚠️ DeepL API ключ не найден. Используйте переменную окружения DEEPL_API_KEY")
+        return text
+    
+    url = "https://api-free.deepl.com/v2/translate"
+    headers = {"Authorization": f"DeepL-Auth-Key {api_key}"}
+    
 
-sections_uk = contract_template_ukraine.render_all_sections(
-    goods_description="Пшениця українська навалом",
-    incoterms_year="2024",
-    quantity=1000,
-    tolerance=5,
-    metrics=["Білок: база 10,5%, не менше 9% (N x 5,7 на суху основу)\n\nПокупець застосовує штраф у розмірі 1% від поставленої кількості / договірної ціни за кожне заниження на 1% від основної пропорції білка. За білок більше 10,5% бонуси не надаються.\n",
-            "Вологість: база 14,0%, макс.15%\n\n Покупець застосовує штраф у розмірі 1% від поставленої кількості / договірної ціни за кожне перевищення 1% базової пропорційної вологості. За вологість менше 14% бонуси не надаються."],
-    price_per_ton=250,
-    price_per_ton_text="двісті п'ятдесят",
-    total_value=250000,
-    total_value_text="двісті п'ятдесят тисяч"
-)
+    lang_mapping = {
+        'uk': 'UK',
+        'ru': 'RU',
+        'en': 'EN' 
+    }
+    
+    target_lang_code = lang_mapping.get(target_lang, target_lang.upper())
+    
+    data = {
+        "text": [text],
+        "target_lang": target_lang_code
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, data=data, timeout=10)
+        response.raise_for_status()
+        result = response.json()
+        return result['translations'][0]['text']
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Ошибка при переводе через DeepL: {e}")
+        return text
+    except (KeyError, IndexError) as e:
+        print(f"❌ Ошибка при обработке ответа DeepL: {e}")
+        return text
 
-sections_ru = contract_template_russia.render_all_sections(
-    goods_description="Пшеница украинская навалом",
-    incoterms_year="2024",
-    quantity=1000,
-    tolerance=5,
-    metrics=["Білок: база 10,5%, не менше 9% (N x 5,7 на суху основу)\n\nПокупець застосовує штраф у розмірі 1% від поставленої кількості / договірної ціни за кожне заниження на 1% від основної пропорції білка. За білок більше 10,5% бонуси не надаються.\n",
-            "Вологість: база 14,0%, макс.15%\n\n Покупець застосовує штраф у розмірі 1% від поставленої кількості / договірної ціни за кожне перевищення 1% базової пропорційної вологості. За вологість менше 14% бонуси не надаються."],
-    price_per_ton=300,
-    price_per_ton_text="триста",
-    total_value=300000,
-    total_value_text="триста тисяч"
-)
-sections_en = contract_template_english.render_all_sections(
-    goods_description="Ukrainian wheat in bulk",
-    incoterms_year="2024",
-    quantity=1000,
-    tolerance=5,    
-    metrics=["Protein: base 10.5%, min.9% (N x 5.7 on dry basis)\n\nThe buyer applies a penalty of 1% of the delivered quantity / contract price for understatement 1% of the base-proportional protein. No bonuses are awarded for a protein content of more than 10.5%.\n",
-            "Moisture: base 14.0%, max.15%\n\n The buyer applies a penalty of 1% of the delivered quantity / contract price for each excess of 1% of the base-proportional humidity. For humidity less than 14% no bonuses are granted."],
-    price_per_ton=350,
-    price_per_ton_text="three hundred fifty",
-    total_value=350000,
-    total_value_text="three hundred fifty thousand"
-)
+def translate_contract_params_deepl(language: str, api_key: str = None) -> Dict[str, Any]:
+    """
+    Создает словарь параметров для указанного языка с автоматическим переводом через DeepL
+    """
+    if language == 'en':
+        return base_contract_params.copy()
+    
+    # Создаем копию базового словаря
+    translated_params = base_contract_params.copy()
+    
+    # Поля, которые нужно переводить
+    translatable_fields = [
+        'seller_name',
+        'seller_representative', 
+        'buyer_name',
+        'buyer_representative',
+        'goods_description',
+        'delivery_address'
+    ]
+    
+    # Переводим текстовые поля
+    for field in translatable_fields:
+        if field in translated_params and isinstance(translated_params[field], str):
+            print(f"🔄 Перевод {field}: {translated_params[field][:50]}...")
+            translated_params[field] = translate_with_deepl(
+                translated_params[field], language, api_key
+            )
+    
+    # Переводим метрики (список строк)
+    if 'metrics' in translated_params and isinstance(translated_params['metrics'], list):
+        print(f"🔄 Перевод metrics...")
+        translated_metrics = []
+        for metric in translated_params['metrics']:
+            translated_metric = translate_with_deepl(metric, language, api_key)
+            translated_metrics.append(translated_metric)
+        translated_params['metrics'] = translated_metrics
+    
+    # Переводим числовые значения в текст
+    if 'price_per_ton' in translated_params:
+        price_text = translate_with_deepl(
+            f"{translated_params['price_per_ton']} dollars per ton", 
+            language, api_key
+        )
+        translated_params['price_per_ton_text'] = price_text
+    
+    if 'total_value' in translated_params:
+        total_text = translate_with_deepl(
+            f"{translated_params['total_value']} dollars", 
+            language, api_key
+        )
+        translated_params['total_value_text'] = total_text
+    
+    return translated_params
+
+# Генерация параметров для всех языков
+contract_params_uk = translate_contract_params_deepl('uk')
+contract_params_en = translate_contract_params_deepl('en')
+contract_params_ru = translate_contract_params_deepl('ru')
+
+contract_template_ukraine = DAPTemplateUkraine(contract_params_uk)
+contract_template_english = DAPTemplateEnglish(contract_params_en)
+contract_template_russia = DAPTemplateRus(contract_params_ru)
+
+# Генерация секций для всех трех языков
+ukraine_section = contract_template_ukraine.render_all_sections()
+english_section = contract_template_english.render_all_sections()
+ru_section = contract_template_russia.render_all_sections()
 
 if __name__ == "__main__":
-    # Генерація PDF
     pdf = ContractPDF(num_columns=3)
-    pdf.add_text([contract_template_ukraine, contract_template_english, contract_template_russia], sections_uk, sections_en, sections_ru)
+    pdf.add_text([contract_template_ukraine, contract_template_english, contract_template_russia], ukraine_section, english_section, ru_section)
     pdf.output("contract_w.pdf")
