@@ -1,7 +1,8 @@
 from fpdf import FPDF
-from generator_text2 import DAPTemplateUkraine
-from generator_text import DAPTemplateEnglish
-from generator_text3 import DAPTemplateRus
+from dap_templates.dap_ukraine import DAPTemplateUkraine
+from dap_templates.dap_english import DAPTemplateEnglish
+from dap_templates.dap_rus import DAPTemplateRus
+from trasliterat import Transliterator
 import requests
 import os
 from dotenv import load_dotenv
@@ -203,27 +204,98 @@ def translate_with_deepl(text: str, target_lang: str, api_key: str = None) -> st
         print(f"❌ Ошибка при обработке ответа DeepL: {e}")
         return text
 
-def translate_contract_params_deepl(language: str, api_key: str = None) -> Dict[str, Any]:
-    """
-    Создает словарь параметров для указанного языка с автоматическим переводом через DeepL
-    """
+def translate_contract_params(language: str, api_key: str = None) -> Dict[str, Any]:
     if language == 'en':
         return base_contract_params.copy()
     
-    # Создаем копию базового словаря
+
+    transliterator = Transliterator()
     translated_params = base_contract_params.copy()
-    
-    # Поля, которые нужно переводить
     translatable_fields = [
-        'seller_name',
         'seller_representative', 
-        'buyer_name',
         'buyer_representative',
         'goods_description',
         'delivery_address'
     ]
+    transliteratable_fields = [
+        'seller_name',
+        'buyer_name'
+    ]
+    for field in transliteratable_fields:
+        if field in translated_params and isinstance(translated_params[field], str):
+            print(f"🔄 Обработка {field}: {translated_params[field]}")
+            
+            # Словарь переводов организационно-правовых форм
+            legal_form_translations = {
+                'uk': {
+                    'LLC': 'ТОВ',
+                    'LTD': 'ТОВ',
+                    'LP': 'КП',
+                    'LLP': 'КП',
+                    'JSC': 'АТ',
+                    'PJSC': 'ПАТ',
+                    'CJSC': 'ЗАТ',
+                    'SP': 'ФОП',
+                    'PE': 'ПП',
+                    'IE': 'ФОП'
+                },
+                'ru': {
+                    'LLC': 'ООО',
+                    'LTD': 'ООО',
+                    'LP': 'КП',
+                    'LLP': 'КП',
+                    'JSC': 'АО',
+                    'PJSC': 'ПАО',
+                    'CJSC': 'ЗАО',
+                    'SP': 'ИП',
+                    'PE': 'ПП',
+                    'IE': 'ИП'
+                }
+            }
+            
+            # Ищем организационно-правовую форму в начале строки
+            company_text = translated_params[field]
+            legal_form = None
+            company_name = company_text
+            
+            # Проверяем различные форматы: "LLC", "LLC ", "LLC "Name"", "LLC Name"
+            for form in ['LLC', 'LTD', 'LP', 'LLP', 'JSC', 'PJSC', 'CJSC', 'SP', 'PE', 'IE']:
+                if company_text.startswith(form):
+                    legal_form = form
+                    # Убираем форму из названия
+                    remaining = company_text[len(form):].strip()
+                    if remaining.startswith('"') and remaining.endswith('"'):
+                        # Формат: "LLC "Name""
+                        company_name = remaining[1:-1]
+                    else:
+                        # Формат: "LLC Name"
+                        company_name = remaining
+                    break
+            
+            if legal_form and language in legal_form_translations:
+                # Переводим организационно-правовую форму
+                translated_form = legal_form_translations[language].get(legal_form, legal_form)
+                
+                # Транслитерируем название компании
+                if language == 'uk':
+                    # Для украинского транслитерируем с латиницы на кириллицу
+                    company_transliterated = transliterator.transliterate(company_name, 'lat_to_cyr_uk')
+                elif language == 'ru':
+                    # Для русского транслитерируем с латиницы на кириллицу
+                    company_transliterated = transliterator.transliterate(company_name, 'lat_to_cyr_ru')
+                else:
+                    # Для других языков транслитерируем с кириллицы на латиницу
+                    company_transliterated = transliterator.transliterate(company_name, 'cyr_to_lat')
+                
+                translated_params[field] = f'{translated_form} "{company_transliterated}"'
+            else:
+                if language == 'uk':
+                    translated_params[field] = transliterator.transliterate(translated_params[field], 'lat_to_cyr_uk')
+                elif language == 'ru':
+                    translated_params[field] = transliterator.transliterate(translated_params[field], 'lat_to_cyr_ru')
+                else:
+                    translated_params[field] = transliterator.transliterate(translated_params[field], 'cyr_to_lat')
     
-    # Переводим текстовые поля
     for field in translatable_fields:
         if field in translated_params and isinstance(translated_params[field], str):
             print(f"🔄 Перевод {field}: {translated_params[field][:50]}...")
@@ -258,9 +330,9 @@ def translate_contract_params_deepl(language: str, api_key: str = None) -> Dict[
     return translated_params
 
 # Генерация параметров для всех языков
-contract_params_uk = translate_contract_params_deepl('uk')
-contract_params_en = translate_contract_params_deepl('en')
-contract_params_ru = translate_contract_params_deepl('ru')
+contract_params_uk = translate_contract_params('uk')
+contract_params_en = translate_contract_params('en')
+contract_params_ru = translate_contract_params('ru')
 
 contract_template_ukraine = DAPTemplateUkraine(contract_params_uk)
 contract_template_english = DAPTemplateEnglish(contract_params_en)

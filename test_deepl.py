@@ -6,7 +6,7 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from main import translate_with_deepl, translate_contract_params_deepl
+from main import translate_with_deepl, translate_contract_params
 
 def test_deepl_translation():
     """Тестирует базовый перевод через DeepL"""
@@ -54,7 +54,7 @@ def test_contract_translation():
     try:
         # Тестируем перевод на русский
         print("\n🇷🇺 Перевод на русский:")
-        ru_params = translate_contract_params_deepl('ru', api_key)
+        ru_params = translate_contract_params('ru', api_key)
         
         print(f"  seller_name: {ru_params['seller_name']}")
         print(f"  goods_description: {ru_params['goods_description']}")
@@ -62,7 +62,7 @@ def test_contract_translation():
         
         # Тестируем перевод на украинский
         print("\n🇺🇦 Перевод на украинский:")
-        uk_params = translate_contract_params_deepl('uk', api_key)
+        uk_params = translate_contract_params('uk', api_key)
         
         print(f"  seller_name: {uk_params['seller_name']}")
         print(f"  goods_description: {uk_params['goods_description']}")
