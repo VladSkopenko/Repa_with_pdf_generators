@@ -43,7 +43,7 @@ class DAPTemplateEnglish:
 
     def render_parties(self):
         return [
-            {"text": f"The present Contract (hereinafter referred to as the \"Contract\") is concluded between the company"
+            {"text": f"The present Contract (hereinafter referred to as the \"Contract\") is concluded between the company "
             f"{self.params['buyer_name']}(\"Buyer\") represented by {self.params['buyer_representative']}, acting on the basis of Charter of the company, from one side, and {self.params['seller_name']} (the \"Seller\") represented by the Director {self.params['seller_representative']}, acting on the basis of the Company's Charter.\n\n"
             f"Taking into account the terms and conditions contained in this document, the parties have agreed as follows:", "bold": False}
         ]

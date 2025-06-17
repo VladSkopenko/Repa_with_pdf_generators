@@ -42,7 +42,7 @@ class DAPTemplateUkraine:
 
     def render_parties(self):
         return [
-            {"text": f"Цей Контракт (надалі — \"Контракт\") укладено між компанією"
+            {"text": f"Цей Контракт (надалі — \"Контракт\") укладено між компанією "
             f"{self.params['buyer_name']}(\"Покупець\") в особі {self.params['buyer_representative']}, що діє на підставі Статуту компанії, з однієї сторони, та {self.params['seller_name']} (\"Продавець\") в особі директора {self.params['seller_representative']}, що діє на підставі Статуту компанії.\n\n"
             f"Беручи до уваги умови, викладені в цьому документі, сторони домовилися про наступне:", "bold": False}
         ]
