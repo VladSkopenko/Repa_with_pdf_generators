@@ -1,4 +1,4 @@
-from t import split_sections
+from section_spliter import SectionSplitter
 
 class DAPTemplateUkraine:
     def __init__(self, contract_params):
@@ -283,6 +283,6 @@ class DAPTemplateUkraine:
         sections.extend(self.render_force_majeure())
         sections.extend(self.render_other_conditions())
         sections.extend(self.render_signatures())
-        return split_sections(sections)
+        return SectionSplitter.split_sections(sections)
 
 

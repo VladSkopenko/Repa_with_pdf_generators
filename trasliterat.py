@@ -43,6 +43,15 @@ class Transliterator:
                 'F': 'Ф', 'f': 'ф',
             }
         }
+        self.abbr_map = {
+            'en': {'LLC': 'LLC', 'LTD': 'LTD', 'INC': 'INC', 'ТОВ': 'LLC', 'ООО': 'LLC', 'АТ': 'INC', 'ЗАТ': 'LTD'},
+            'uk': {'LLC': 'ТОВ', 'LTD': 'ТОВ', 'INC': 'АТ', 'ТОВ': 'ТОВ', 'ООО': 'ТОВ', 'АТ': 'АТ', 'ЗАТ': 'ЗАТ'},
+            'ru': {'LLC': 'ООО', 'LTD': 'ООО', 'INC': 'АО', 'ТОВ': 'ООО', 'ООО': 'ООО', 'АТ': 'АО', 'ЗАТ': 'ЗАО'},
+        }
+
+    def transform_abbr(self, abbr: str, target_lang: str) -> str:
+        abbr = abbr.upper()
+        return self.abbr_map.get(target_lang, {}).get(abbr, abbr)
     
 
     
@@ -53,7 +62,6 @@ class Transliterator:
         
         mapping = self.language_maps[direction]
         
-        # For multi-character mappings (like 'Shch' -> 'Щ')
         if any(len(key) > 1 for key in mapping.keys()):
             return self._transliterate_multi_char(text, mapping)
         else:
