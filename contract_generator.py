@@ -123,3 +123,12 @@ class ContractPDF(FPDF):
         self.cell(w, h, '', border=1)
 
 
+if __name__ == "__main__":
+    langs = ['uk', 'en', 'ru']
+    from dap_templates.dap_template_factory import ContractTemplateFactory
+    from back_up import params
+    templates = ContractTemplateFactory.get_templates(langs, params=params)
+    sections = [template.render_all_sections() for template in templates]
+    pdf = ContractPDF(num_columns=len(langs))
+    pdf.add_text(templates, *sections)
+    pdf.output("contract_w.pdf")
