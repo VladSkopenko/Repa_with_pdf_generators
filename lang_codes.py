@@ -1,5 +1,5 @@
 from countryinfo import CountryInfo
 
-country = CountryInfo('Belarus')
-languages = country.info().get('languages', [])
+country = CountryInfo("United Kingdom")
+languages = country.info().get("languages", [])
 print(languages)

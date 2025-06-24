@@ -1,5 +1,6 @@
 from fpdf import FPDF
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -12,17 +13,15 @@ class ContractPDF(FPDF):
     DEFAULT_HEADER_FONT_SIZE = 10
     DEFAULT_LINE_HEIGHT = 5
     COLUMN_PADDING = 2
-    
-    def __init__(self, num_columns=1, align='L'):
-        super().__init__()
-        self.add_font('TimesNewRoman', '', 'fonts/TIMES.TTF')
-        self.add_font('TimesNewRoman', 'B', 'fonts/TIMESBD.TTF')
-        self.add_font('TimesNewRoman', 'I', 'fonts/TIMESI.TTF')
-        self.add_font('TimesNewRoman', 'BI', 'fonts/TIMESBI.TTF')
-        self.set_font("TimesNewRoman", '', self.DEFAULT_FONT_SIZE)
-        self.align = align
 
-        
+    def __init__(self, num_columns=1, align="L"):
+        super().__init__()
+        self.add_font("TimesNewRoman", "", "fonts/TIMES.TTF")
+        self.add_font("TimesNewRoman", "B", "fonts/TIMESBD.TTF")
+        self.add_font("TimesNewRoman", "I", "fonts/TIMESI.TTF")
+        self.add_font("TimesNewRoman", "BI", "fonts/TIMESBI.TTF")
+        self.set_font("TimesNewRoman", "", self.DEFAULT_FONT_SIZE)
+        self.align = align
 
         self.set_left_margin(self.DEFAULT_MARGIN)
         self.set_right_margin(self.DEFAULT_MARGIN)
@@ -33,9 +32,11 @@ class ContractPDF(FPDF):
 
     def _render_column_header(self, header, x_start, y_start, column_width):
         self.set_xy(x_start + self.COLUMN_PADDING, y_start + self.COLUMN_PADDING)
-        self.set_font("TimesNewRoman", 'B', self.DEFAULT_HEADER_FONT_SIZE)
-        self.multi_cell(column_width - 2 * self.COLUMN_PADDING, 8, header, border=0, align='C')
-        self.set_font("TimesNewRoman", '', self.DEFAULT_FONT_SIZE)
+        self.set_font("TimesNewRoman", "B", self.DEFAULT_HEADER_FONT_SIZE)
+        self.multi_cell(
+            column_width - 2 * self.COLUMN_PADDING, 8, header, border=0, align="C"
+        )
+        self.set_font("TimesNewRoman", "", self.DEFAULT_FONT_SIZE)
         return self.get_y()
 
     def _calculate_text_height(self, text, column_width):
@@ -47,33 +48,43 @@ class ContractPDF(FPDF):
             border=0,
             align=self.align,
             dry_run=True,
-            output="LINES"
+            output="LINES",
         )
         return len(lines) * self.DEFAULT_LINE_HEIGHT
 
-    def _render_column_content(self, sections, start_index, x_start, y_start, column_width):
+    def _render_column_content(
+        self, sections, start_index, x_start, y_start, column_width
+    ):
         y = y_start
         self.set_xy(x_start + self.COLUMN_PADDING, y)
         current_index = start_index
-        
+
         while current_index < len(sections):
             section = sections[current_index]
-            self.set_font("TimesNewRoman", 'B' if section["bold"] else '', self.DEFAULT_FONT_SIZE)
-            
+            self.set_font(
+                "TimesNewRoman", "B" if section["bold"] else "", self.DEFAULT_FONT_SIZE
+            )
+
             est_height = self._calculate_text_height(section["text"], column_width)
-            
+
             if y + est_height > self.h - self.DEFAULT_BOTTOM_MARGIN:
                 break
-            
 
-            self.set_font("TimesNewRoman", 'B' if section["bold"] else '', self.DEFAULT_FONT_SIZE)
-            self.multi_cell(column_width - 2 * self.COLUMN_PADDING, self.DEFAULT_LINE_HEIGHT, section["text"], border=0, align=self.align)
-            
+            self.set_font(
+                "TimesNewRoman", "B" if section["bold"] else "", self.DEFAULT_FONT_SIZE
+            )
+            self.multi_cell(
+                column_width - 2 * self.COLUMN_PADDING,
+                self.DEFAULT_LINE_HEIGHT,
+                section["text"],
+                border=0,
+                align=self.align,
+            )
 
             y = self.get_y()
             self.set_xy(x_start + self.COLUMN_PADDING, y)
             current_index += 1
-            
+
         return current_index
 
     def _get_column_x(self, col_idx, column_width):
@@ -90,18 +101,24 @@ class ContractPDF(FPDF):
 
         while any(indexes[i] < lengths[i] for i in range(self.num_columns)):
             self.add_page()
-            y_positions = [y_start + self.COLUMN_PADDING for _ in range(self.num_columns)]
+            y_positions = [
+                y_start + self.COLUMN_PADDING for _ in range(self.num_columns)
+            ]
 
             if self.num_columns > 1:
                 for col_idx in range(self.num_columns):
                     x_start = self._get_column_x(col_idx, column_width)
                     self.set_xy(x_start, y_start)
-                    self.draw_column_border(x_start, y_start, column_width, column_height)
+                    self.draw_column_border(
+                        x_start, y_start, column_width, column_height
+                    )
 
             for col_idx in range(self.num_columns):
                 x_start = self._get_column_x(col_idx, column_width)
                 if first_page[col_idx]:
-                    y_positions[col_idx] = self._render_column_header(headers[col_idx], x_start, y_start, column_width)
+                    y_positions[col_idx] = self._render_column_header(
+                        headers[col_idx], x_start, y_start, column_width
+                    )
                     first_page[col_idx] = False
                 else:
                     y_positions[col_idx] = y_start + self.COLUMN_PADDING
@@ -111,22 +128,23 @@ class ContractPDF(FPDF):
                 x_start = self._get_column_x(col_idx, column_width)
                 y = y_positions[col_idx]
                 indexes[col_idx] = self._render_column_content(
-                    sections_columns[col_idx], 
-                    indexes[col_idx], 
-                    x_start, 
-                    y, 
-                    column_width
+                    sections_columns[col_idx],
+                    indexes[col_idx],
+                    x_start,
+                    y,
+                    column_width,
                 )
 
     def draw_column_border(self, x, y, w, h):
         self.set_xy(x, y)
-        self.cell(w, h, '', border=1)
+        self.cell(w, h, "", border=1)
 
 
 if __name__ == "__main__":
-    langs = ['uk', 'en', 'ru']
+    langs = ["uk", "en", "ru"]
     from dap_templates.dap_template_factory import ContractTemplateFactory
     from back_up import params
+
     templates = ContractTemplateFactory.get_templates(langs, params=params)
     sections = [template.render_all_sections() for template in templates]
     pdf = ContractPDF(num_columns=len(langs))
